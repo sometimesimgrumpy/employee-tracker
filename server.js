@@ -3,23 +3,16 @@
 // const inquirer = require("inquirer");
 import inquirer from "inquirer";
 import mysql from "mysql2";
-import consoleTable from "console.table";
+import "console.table";
 import "dotenv/config";
 
-// Connect to database - use dotenv
-const db = mysql.createConnection(
-  {
-    host: "localhost",
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-  },
-  console.log(`Connected to the employees_db database.`)
-);
+const PORT = process.env.PORT || 3001;
 
-db.connect(function () {
-  startMenu;
-});
+// intialize connection
+// db.connect(function () {
+//   console.log(`Connected to the employees_db database.`);
+//   startMenu;
+// });
 
 // question arrays to clean up code below
 const menu = [
@@ -44,12 +37,12 @@ const empData = [
   {
     type: "input",
     message: "What is the employee's first name?",
-    name: "first_name",
+    name: "firstName",
   },
   {
     type: "input",
     message: "What is the employee's last name?",
-    name: "last_name",
+    name: "lastName",
   },
   {
     type: "list",
@@ -64,12 +57,13 @@ const empData = [
       { name: "Legal Team Lead", value: 7 },
       { name: "Lawyer", value: 8 },
     ],
-    name: "role_id",
+    name: "role",
   },
   {
     type: "input",
     message: "What is the manager's ID number?",
-    name: "manager_id",
+    name: "manager",
+    default: 1,
   },
 ];
 
@@ -77,12 +71,12 @@ const roleData = [
   {
     type: "input",
     message: "What is the title of this role?",
-    name: "title",
+    name: "roleTitle",
   },
   {
     type: "input",
     message: "What is the salary of this role?",
-    name: "salary",
+    name: "roleSalary",
     validate: function (salaryInput) {
       if (!salaryInput || isNaN(salaryInput)) {
         console.log("Please enter a valid salary.");
@@ -101,7 +95,7 @@ const roleData = [
       { name: "Finance", value: 3 },
       { name: "Engineering", value: 4 },
     ],
-    name: "department_id",
+    name: "department",
   },
 ];
 
@@ -109,27 +103,39 @@ const deptData = [
   {
     type: "input",
     message: "What is the name of this department?",
-    name: "dept_name",
+    name: "deptName",
   },
 ];
+
+// Connect to database - use dotenv
+const db = mysql.createConnection(
+  {
+    host: "localhost",
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: PORT,
+  }
+  //startMenu()
+);
 
 // run start menu
 function startMenu() {
   inquirer.prompt(menu).then((choice) => {
     console.log(choice);
-    if (choice.option === "View All Employees") {
+    if (choice.options === "View All Employees") {
       viewAllEmployees();
-    } else if (choice.option === "Add Employee") {
+    } else if (choice.options === "Add Employee") {
       addEmployee();
-    } else if (choice.option === "Update Employee Role") {
+    } else if (choice.options === "Update Employee Role") {
       updateEmployee();
-    } else if (choice.option === "View All Roles") {
+    } else if (choice.options === "View All Roles") {
       viewAllRoles();
-    } else if (choice.option === "Add Role") {
+    } else if (choice.options === "Add Role") {
       addRole();
-    } else if (choice.option === "View All Departments") {
+    } else if (choice.options === "View All Departments") {
       viewAllDepts();
-    } else if (choice.option === "Add Department") {
+    } else if (choice.options === "Add Department") {
       addDept();
     } else {
       console.log("You are leaving the Employee Tracker! See you next time");
@@ -142,25 +148,34 @@ function startMenu() {
 // query for employees
 function viewAllEmployees() {
   console.log("view all employees placeholder");
+  console.log(`\nWould you like to continue with another operation?\n`);
+  startMenu();
   // db.query();
 }
 
 // add employee
 function addEmployee() {
   inquirer.prompt(empData).then((employee) => {
-    console.log(
-      `You have added a new employee, ${employee.first_name} ${employee.last_name}!`
-    );
     // https://www.youtube.com/watch?v=gZugKSoAyoY
     // https://www.sqlservertutorial.net/sql-server-basics/sql-server-insert-multiple-rows/
     db.query(
       `INSERT INTO employee (first_name, last_name, role_id, manager_id) 
       SET ?`,
       {
-        first_name: employee.first_name,
-        last_name: employee.last_name,
-        role_id: employee.role_id,
-        manager_id: employee.manager_id,
+        first_name: employee.firstName,
+        last_name: employee.lastName,
+        role_id: employee.role,
+        manager_id: employee.manager,
+      },
+      function (err) {
+        if (err) {
+          console.log(err);
+        } else {
+          console.log(
+            `You have added a new employee, ${employee.first_name} ${employee.last_name}!`
+          );
+          startMenu();
+        }
       }
     );
     console.log(`\nWould you like to continue with another operation?\n`);
@@ -168,23 +183,24 @@ function addEmployee() {
   });
 }
 
-// updatnpm e employee
+// update employee
 function updateEmployee() {
   console.log("update Employee placeholder");
+  console.log(`\nWould you like to continue with another operation?\n`);
+  startMenu();
 }
 
 // https://www.sqlservertutorial.net/sql-server-basics/sql-server-select/
 // query for roles
 function viewAllRoles() {
   db.query(
-    `SELECT job_role.id, job_role.title, job_role.salary, department.dept_name as department
-    FROM job_role
-    JOIN department ON job_role.department_id = department.id`,
-    function (err, result) {
+    `SELECT *
+    FROM job_role`,
+    function (err, res) {
       if (err) {
         console.log(err);
       } else {
-        consoleTable(result);
+        console.table(res);
         startMenu();
       }
     }
@@ -199,9 +215,9 @@ function addRole() {
       `INSERT INTO job_role (title, salary, department_id)
       SET ?`,
       {
-        title: role.title,
-        salary: role.salary,
-        department_id: role.department_id,
+        title: role.roleTitle,
+        salary: role.roleSalary,
+        department_id: role.department,
       }
     );
     console.log(`\nWould you like to continue with another operation?\n`);
@@ -229,7 +245,7 @@ function addDept() {
       `INSERT INTO department (dept_name)
       SET ?`,
       {
-        dept_name: dept_name,
+        dept_name: deptName,
       }
     );
     console.log(`\nWould you like to continue with another operation?\n`);
@@ -238,4 +254,4 @@ function addDept() {
 }
 
 // start the app
-startMenu();
+//startMenu();
