@@ -1,5 +1,5 @@
 -- check video for seeds
-INSERT INTO departments (dept_name)
+INSERT INTO department (dept_name)
 VALUES 
     ("Sales"),
     ("Legal"),
@@ -19,11 +19,11 @@ VALUES
 
 INSERT INTO employee (first_name, last_name, role_id, manager_id)
     VALUES
-    ("Eren", "Yeager", 1)
-    ("Armin", "Arlert", 2, 1)
-    ("Mikasa", "Ackerman", 3)
-    ("Reiner", "Braun", 4, 3)
-    ("Sasha", "Blouse", 5)
-    ("Connie", "Springer", 6, 5)
-    ("Annie", "Leonhart", 7)
+    ("Eren", "Yeager", 1, null),
+    ("Armin", "Arlert", 2, 1),
+    ("Mikasa", "Ackerman", 3, null),
+    ("Reiner", "Braun", 4, 3),
+    ("Sasha", "Blouse", 5, null),
+    ("Connie", "Springer", 6, 5),
+    ("Annie", "Leonhart", 7, null),
     ("Hange", "Zoe", 8, 7);

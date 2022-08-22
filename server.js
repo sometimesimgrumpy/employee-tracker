@@ -8,12 +8,6 @@ import "dotenv/config";
 
 const PORT = process.env.PORT || 3001;
 
-// intialize connection
-// db.connect(function () {
-//   console.log(`Connected to the employees_db database.`);
-//   startMenu;
-// });
-
 // question arrays to clean up code below
 const menu = [
   {
@@ -33,72 +27,6 @@ const menu = [
   },
 ];
 
-const empData = [
-  {
-    type: "input",
-    message: "What is the employee's first name?",
-    name: "firstName",
-  },
-  {
-    type: "input",
-    message: "What is the employee's last name?",
-    name: "lastName",
-  },
-  {
-    type: "list",
-    message: "What is the employee's role?",
-    choices: [
-      { name: "Sales Lead", value: 1 },
-      { name: "Salesperson", value: 2 },
-      { name: "Lead Engineer", value: 3 },
-      { name: "Software Engineer", value: 4 },
-      { name: "Account Manager", value: 5 },
-      { name: "Accountant", value: 6 },
-      { name: "Legal Team Lead", value: 7 },
-      { name: "Lawyer", value: 8 },
-    ],
-    name: "role",
-  },
-  {
-    type: "input",
-    message: "What is the manager's ID number?",
-    name: "manager",
-    default: 1,
-  },
-];
-
-const roleData = [
-  {
-    type: "input",
-    message: "What is the title of this role?",
-    name: "roleTitle",
-  },
-  {
-    type: "input",
-    message: "What is the salary of this role?",
-    name: "roleSalary",
-    validate: function (salaryInput) {
-      if (!salaryInput || isNaN(salaryInput)) {
-        console.log("Please enter a valid salary.");
-        return false;
-      } else {
-        return true;
-      }
-    },
-  },
-  {
-    type: "list",
-    message: "What is department is this role a part of?",
-    choices: [
-      { name: "Sales", value: 1 },
-      { name: "Legal", value: 2 },
-      { name: "Finance", value: 3 },
-      { name: "Engineering", value: 4 },
-    ],
-    name: "department",
-  },
-];
-
 const deptData = [
   {
     type: "input",
@@ -115,9 +43,15 @@ const db = mysql.createConnection(
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
     port: PORT,
-  }
-  //startMenu()
+  },
+  startMenu()
 );
+
+// intialize connection
+// db.connect(function () {
+//   console.log(`Connected to the employees_db database.`);
+//   startMenu;
+// });
 
 // run start menu
 function startMenu() {
@@ -147,40 +81,99 @@ function startMenu() {
 
 // query for employees
 function viewAllEmployees() {
-  console.log("view all employees placeholder");
+  // db.query();
+
+  // console.log("view all employees placeholder");
   console.log(`\nWould you like to continue with another operation?\n`);
   startMenu();
-  // db.query();
 }
 
 // add employee
 function addEmployee() {
-  inquirer.prompt(empData).then((employee) => {
-    // https://www.youtube.com/watch?v=gZugKSoAyoY
-    // https://www.sqlservertutorial.net/sql-server-basics/sql-server-insert-multiple-rows/
-    db.query(
-      `INSERT INTO employee (first_name, last_name, role_id, manager_id) 
-      SET ?`,
-      {
-        first_name: employee.firstName,
-        last_name: employee.lastName,
-        role_id: employee.role,
-        manager_id: employee.manager,
-      },
-      function (err) {
-        if (err) {
-          console.log(err);
-        } else {
-          console.log(
-            `You have added a new employee, ${employee.first_name} ${employee.last_name}!`
-          );
-          startMenu();
-        }
-      }
-    );
-    console.log(`\nWould you like to continue with another operation?\n`);
-    startMenu();
+  // two selects for dynamic lists
+  const roleList = [];
+  db.query("SELECT title FROM job_role", function (err, res) {
+    if (err) {
+      console.log(err);
+    }
+    for (let i = 0; i < res.length; i++) {
+      roleList.push(res[i].title);
+    }
   });
+
+  const managerList = [];
+  db.query(
+    "SELECT CONCAT(first_name, ' ', last_name) AS manager_name FROM employee",
+    function (err, res) {
+      if (err) {
+        console.log(err);
+      }
+      for (let j = 0; j < res.length; j++) {
+        managerList.push(res[j].manager_name);
+      }
+      inquirer
+        .prompt([
+          {
+            type: "input",
+            message: "What is the employee's first name?",
+            name: "firstName",
+          },
+          {
+            type: "input",
+            message: "What is the employee's last name?",
+            name: "lastName",
+          },
+          {
+            type: "list",
+            message: "What is the employee's role?",
+            // create dynamic list of roles like in the add a role function
+            choices: roleList,
+            name: "role",
+          },
+          {
+            type: "list",
+            message: "Who is this employee's manager?",
+            choices: managerList,
+            name: "manager",
+          },
+        ])
+        .then((employee) => {
+          // handle role ID
+          let roleID;
+          for (let k = 0; k < res.length; k++) {
+            if (res[k].title === employee.role) {
+              roleID = res[k].id;
+            }
+          }
+
+          // handle manager name to ID
+          let managerID;
+          for (let j = 0; j < res.length; j++) {
+            if (res[j].manager_name === employee.department) {
+              managerID = res[j].id;
+            }
+          }
+
+          // https://www.youtube.com/watch?v=gZugKSoAyoY
+          // https://www.mysqltutorial.org/mysql-nodejs/insert/
+          db.query(
+            "INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?)",
+            // use array not obj for values - change the role and manager parts
+            [employee.firstName, employee.lastName, roleID, managerID],
+            function (err) {
+              if (err) {
+                console.log(err);
+              } else {
+                console.log(
+                  `\nYou have added a new employee, ${employee.firstName} ${employee.lastName}! \nWould you like to continue with another operation?`
+                );
+                startMenu();
+              }
+            }
+          );
+        });
+    }
+  );
 }
 
 // update employee
@@ -194,13 +187,16 @@ function updateEmployee() {
 // query for roles
 function viewAllRoles() {
   db.query(
-    `SELECT *
-    FROM job_role`,
+    // add department id info
+    `SELECT job_role.id, job_role.title, job_role.salary, department.dept_name as department
+    FROM job_role
+    JOIN department ON job_role.department_id = department.id`,
     function (err, res) {
       if (err) {
         console.log(err);
       } else {
         console.table(res);
+        console.log("\nWould you like to continue with another operation?\n");
         startMenu();
       }
     }
@@ -209,19 +205,71 @@ function viewAllRoles() {
 
 // add role
 function addRole() {
-  inquirer.prompt(roleData).then((role) => {
-    console.log(`You have added a new role, ${role.title}.`);
-    db.query(
-      `INSERT INTO job_role (title, salary, department_id)
-      SET ?`,
-      {
-        title: role.roleTitle,
-        salary: role.roleSalary,
-        department_id: role.department,
-      }
-    );
-    console.log(`\nWould you like to continue with another operation?\n`);
-    startMenu();
+  // wrap query around questions for dynamic list of department names, so created depts get called in
+  db.query("SELECT dept_name FROM department", function (err, res) {
+    if (err) {
+      console.log(err);
+    }
+    inquirer
+      .prompt([
+        {
+          type: "input",
+          message: "What is the title of this role?",
+          name: "roleTitle",
+        },
+        {
+          type: "input",
+          message: "What is the salary of this role?",
+          name: "roleSalary",
+          validate: function (salaryInput) {
+            if (!salaryInput || isNaN(salaryInput)) {
+              console.log("Please enter a valid salary.");
+              return false;
+            } else {
+              return true;
+            }
+          },
+        },
+        {
+          type: "list",
+          message: "What is department is this role a part of?",
+          // needs to be nested in the query instead of outside of it
+          choices: function () {
+            let deptList = [];
+            for (let i = 0; i < res.length; i++) {
+              deptList.push(res[i].dept_name);
+            }
+            return deptList;
+          },
+          name: "department",
+        },
+      ])
+      .then((role) => {
+        // handle dept id issue
+        let deptID;
+        // loop through the dept_names and compare to job_role id
+        for (let j = 0; j < res.length; j++) {
+          if (res[j].dept_name === role.department) {
+            deptID = res[j].id;
+          }
+        }
+
+        db.query(
+          "INSERT INTO job_role (title, salary, department_id) VALUES (?, ?, ?)",
+          // call the ID as the deptID above, not the role department choice
+          [role.roleTitle, role.roleSalary, deptID],
+          function (err) {
+            if (err) {
+              console.log(err);
+            } else {
+              console.log(
+                `\nYou have added a new role, ${role.roleTitle}! \nWould you like to continue with another operation?`
+              );
+              startMenu();
+            }
+          }
+        );
+      });
   });
 }
 
@@ -231,7 +279,8 @@ function viewAllDepts() {
     if (err) {
       console.log(err);
     } else {
-      consoleTable(result);
+      console.table(result);
+      console.log("\nWould you like to continue with another operation?\n");
       startMenu();
     }
   });
@@ -240,16 +289,18 @@ function viewAllDepts() {
 // add department
 function addDept() {
   inquirer.prompt(deptData).then((dept) => {
-    console.log(`You have added a new Department, ${dept.dept_name}.`);
     db.query(
-      `INSERT INTO department (dept_name)
-      SET ?`,
-      {
-        dept_name: deptName,
+      "INSERT INTO department (dept_name) VALUES (?)",
+      [dept.deptName],
+      function (err) {
+        if (err) {
+          console.log(err);
+        } else {
+          console.log(`\nYou have added a new Department, ${dept.deptName}!\n`);
+          startMenu();
+        }
       }
     );
-    console.log(`\nWould you like to continue with another operation?\n`);
-    startMenu();
   });
 }
 
