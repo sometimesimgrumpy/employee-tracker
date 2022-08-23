@@ -111,69 +111,85 @@ function addEmployee() {
       for (let j = 0; j < res.length; j++) {
         managerList.push(res[j].manager_name);
       }
-      inquirer
-        .prompt([
-          {
-            type: "input",
-            message: "What is the employee's first name?",
-            name: "firstName",
-          },
-          {
-            type: "input",
-            message: "What is the employee's last name?",
-            name: "lastName",
-          },
-          {
-            type: "list",
-            message: "What is the employee's role?",
-            // create dynamic list of roles like in the add a role function
-            choices: roleList,
-            name: "role",
-          },
-          {
-            type: "list",
-            message: "Who is this employee's manager?",
-            choices: managerList,
-            name: "manager",
-          },
-        ])
-        .then((employee) => {
-          // handle role ID
-          let roleID;
-          for (let k = 0; k < res.length; k++) {
-            if (res[k].title === employee.role) {
-              roleID = res[k].id;
-            }
-          }
+    }
+  );
 
-          // handle manager name to ID
+  inquirer
+    .prompt([
+      {
+        type: "input",
+        message: "What is the employee's first name?",
+        name: "firstName",
+      },
+      {
+        type: "input",
+        message: "What is the employee's last name?",
+        name: "lastName",
+      },
+      {
+        type: "list",
+        message: "What is the employee's role?",
+        // create dynamic list of roles like in the add a role function
+        choices: roleList,
+        name: "role",
+      },
+      {
+        type: "list",
+        message: "Who is this employee's manager?",
+        choices: managerList,
+        name: "manager",
+      },
+    ])
+    .then((employee) => {
+      // handle role ID - wrap in query
+      db.query("SELECT * FROM job_role", function (err, res) {
+        if (err) {
+          console.log(err);
+        }
+        let roleID;
+        for (let k = 0; k < res.length; k++) {
+          if (res[k].title == employee.role) {
+            roleID = res[k].id;
+          }
+        }
+      });
+
+      // handle manager name to ID - wrap in query
+      db.query(
+        "SELECT employee.id, CONCAT(first_name, ' ', last_name) AS manager_name FROM employee",
+        function (err, res) {
+          if (err) {
+            console.log(err);
+          }
           let managerID;
           for (let j = 0; j < res.length; j++) {
-            if (res[j].manager_name === employee.department) {
+            if (res[j].manager_name == employee.manager) {
               managerID = res[j].id;
             }
           }
+        }
+      );
 
-          // https://www.youtube.com/watch?v=gZugKSoAyoY
-          // https://www.mysqltutorial.org/mysql-nodejs/insert/
-          db.query(
-            "INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?)",
-            // use array not obj for values - change the role and manager parts
-            [employee.firstName, employee.lastName, roleID, managerID],
-            function (err) {
-              if (err) {
-                console.log(err);
-              } else {
-                console.log(
-                  `\nYou have added a new employee, ${employee.firstName} ${employee.lastName}! \nWould you like to continue with another operation?`
-                );
-                startMenu();
-              }
-            }
-          );
-        });
-    }
-  );
+      console.log([employee.firstName, employee.lastName, roleID, managerID]);
+
+      // https://www.youtube.com/watch?v=gZugKSoAyoY
+      // https://www.mysqltutorial.org/mysql-nodejs/insert/
+      // db.query(
+      //   "INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?)",
+      //   // use array not obj for values - change the role and manager parts
+      //   [employee.firstName, employee.lastName, roleID, managerID],
+      //   function (err) {
+      //     if (err) {
+      //       console.log(err);
+      //     } else {
+      //       console.log(
+      //         `\nYou have added a new employee, ${employee.firstName} ${employee.lastName}! \nWould you like to continue with another operation?`
+      //       );
+      //       startMenu();
+      //     }
+      //   }
+      // );
+    });
 }
 
 // update employee
@@ -206,10 +222,11 @@ function viewAllRoles() {
 // add role
 function addRole() {
   // wrap query around questions for dynamic list of department names, so created depts get called in
-  db.query("SELECT dept_name FROM department", function (err, res) {
+  db.query("SELECT * FROM department", function (err, res) {
     if (err) {
       console.log(err);
     }
+
     inquirer
       .prompt([
         {
@@ -249,7 +266,7 @@ function addRole() {
         let deptID;
         // loop through the dept_names and compare to job_role id
         for (let j = 0; j < res.length; j++) {
-          if (res[j].dept_name === role.department) {
+          if (res[j].dept_name == role.department) {
             deptID = res[j].id;
           }
         }
