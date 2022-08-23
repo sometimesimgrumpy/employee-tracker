@@ -49,5 +49,5 @@ CREATE TABLE employee (
   -- connect employee id to manager_id
   FOREIGN KEY (manager_id)
   REFERENCES employee(id)
-  ON DELETE SET NULL,
+  ON DELETE SET NULL
 );

@@ -72,7 +72,7 @@ function startMenu() {
     } else if (choice.options === "Add Department") {
       addDept();
     } else {
-      console.log("You are leaving the Employee Tracker! See you next time");
+      console.log("You are leaving the Employee Tracker! See you next time!");
       //return;
       db.end;
     }
@@ -81,35 +81,56 @@ function startMenu() {
 
 // query for employees
 function viewAllEmployees() {
-  // db.query();
+  // how to self reference a join for manager names instead of IDs?
+  // https://learnsql.com/blog/what-is-self-join-sql/#:~:text=The%20self%20join%2C%20as%20its,the%20values%20in%20Column%20X.
+  db.query(
+    `SELECT staff.id AS employee_id, CONCAT(staff.first_name,' ',staff.last_name) AS employee_name, job_role.title AS job_title, job_role.salary, department.dept_name AS department_name, CONCAT(manager.first_name,' ', manager.last_name) 
+    AS manager_name 
+    FROM employee staff 
+    INNER JOIN job_role ON job_role.id=staff.role_id 
+    INNER JOIN department ON department.id=job_role.department_id 
+    LEFT JOIN employee manager ON manager.id=staff.manager_id
+    ORDER BY employee_id;`,
+    function (err, res) {
+      if (err) {
+        console.log(err);
+      } else {
+        console.table(res);
+        console.log("\nWould you like to continue with another operation?\n");
+        startMenu();
+      }
+    }
+  );
 
   // console.log("view all employees placeholder");
-  console.log(`\nWould you like to continue with another operation?\n`);
-  startMenu();
 }
 
 // add employee
 function addEmployee() {
   // two selects for dynamic lists
   const roleList = [];
-  db.query("SELECT title FROM job_role", function (err, res) {
+  const roleIds = [];
+  db.query("SELECT id, title FROM job_role", function (err, res) {
     if (err) {
       console.log(err);
     }
     for (let i = 0; i < res.length; i++) {
       roleList.push(res[i].title);
+      roleIds.push(res[i].id);
     }
   });
 
-  const managerList = [];
+  const managerList = ["Is a Manager"];
+  const managerIds = [null];
   db.query(
-    "SELECT CONCAT(first_name, ' ', last_name) AS manager_name FROM employee",
+    "SELECT employee.id, CONCAT(first_name, ' ', last_name) AS manager_name FROM employee",
     function (err, res) {
       if (err) {
         console.log(err);
       }
       for (let j = 0; j < res.length; j++) {
         managerList.push(res[j].manager_name);
+        managerIds.push(res[j].id);
       }
     }
   );
@@ -141,62 +162,107 @@ function addEmployee() {
       },
     ])
     .then((employee) => {
-      // handle role ID - wrap in query
-      db.query("SELECT * FROM job_role", function (err, res) {
-        if (err) {
-          console.log(err);
+      // handle role ID
+      let roleID;
+      for (let k = 0; k < roleList.length; k++) {
+        if (employee.role == roleList[k]) {
+          roleID = roleIds[k];
         }
-        let roleID;
-        for (let k = 0; k < res.length; k++) {
-          if (res[k].title == employee.role) {
-            roleID = res[k].id;
-          }
-        }
-      });
+      }
 
-      // handle manager name to ID - wrap in query
-      db.query(
-        "SELECT employee.id, CONCAT(first_name, ' ', last_name) AS manager_name FROM employee",
-        function (err, res) {
-          if (err) {
-            console.log(err);
-          }
-          let managerID;
-          for (let j = 0; j < res.length; j++) {
-            if (res[j].manager_name == employee.manager) {
-              managerID = res[j].id;
-            }
-          }
+      // handle manager name to ID
+      let managerID;
+      for (let j = 0; j < managerList.length; j++) {
+        if (employee.manager == managerList[j]) {
+          managerID = managerIds[j];
         }
-      );
+      }
 
-      console.log([employee.firstName, employee.lastName, roleID, managerID]);
+      //console.log([employee.firstName, employee.lastName, roleID, managerID]);
 
       // https://www.youtube.com/watch?v=gZugKSoAyoY
       // https://www.mysqltutorial.org/mysql-nodejs/insert/
-      // db.query(
-      //   "INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?)",
-      //   // use array not obj for values - change the role and manager parts
-      //   [employee.firstName, employee.lastName, roleID, managerID],
-      //   function (err) {
-      //     if (err) {
-      //       console.log(err);
-      //     } else {
-      //       console.log(
-      //         `\nYou have added a new employee, ${employee.firstName} ${employee.lastName}! \nWould you like to continue with another operation?`
-      //       );
-      //       startMenu();
-      //     }
-      //   }
-      // );
+      db.query(
+        "INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?)",
+        // use array not obj for values - change the role and manager parts
+        [employee.firstName, employee.lastName, roleID, managerID],
+        function (err) {
+          if (err) {
+            console.log(err);
+          } else {
+            console.log(
+              `\nYou have added a new employee, ${employee.firstName} ${employee.lastName}! \nWould you like to continue with another operation?\n`
+            );
+            startMenu();
+          }
+        }
+      );
     });
 }
 
 // update employee
 function updateEmployee() {
-  console.log("update Employee placeholder");
-  console.log(`\nWould you like to continue with another operation?\n`);
-  startMenu();
+  // get employee list & role list for update
+  let employeeList = [];
+  db.query(
+    "SELECT CONCAT(first_name, ' ', last_name) AS emp_name FROM employee",
+    function (err, res) {
+      if (err) {
+        console.log(err);
+      }
+      //console.log([res]);
+      for (let i = 0; i < res.length; i++) {
+        employeeList.push(res[i].emp_name);
+        //console.log(res[i].employees);
+      }
+      console.log("this is the list:", employeeList);
+    }
+  );
+
+  const roleUpdList = [];
+  const updateIds = [];
+  db.query("SELECT id, title FROM job_role", function (err, res) {
+    if (err) {
+      console.log(err);
+    }
+    for (let j = 0; j < res.length; j++) {
+      roleUpdList.push(res[j].title);
+      updateIds.push(res[j].id);
+    }
+  });
+
+  inquirer
+    .prompt([
+      {
+        type: "list",
+        message: "Which employee would you like to update?",
+        choices: employeeList,
+        name: "empUpdate",
+      },
+      {
+        type: "list",
+        message: "What is the employee's updated role?",
+        choices: roleUpdList,
+        name: "roleUpdate",
+      },
+    ])
+    .then((update) => {
+      // handle updated role ID
+      let roleIDUpd;
+      for (let k = 0; k < roleUpdList.length; k++) {
+        if (update.roleUpdate == roleUpdList[k]) {
+          roleIDUpd = roleIds[k];
+        }
+      }
+
+      console.log([update.empUpdate, roleIDUpd]);
+
+      // query for update https://www.w3schools.com/mysql/mysql_update.asp
+      console.log(`\nWould you like to continue with another operation?\n`);
+      startMenu();
+    });
+
+  //console.log("update Employee placeholder");
 }
 
 // https://www.sqlservertutorial.net/sql-server-basics/sql-server-select/
@@ -280,7 +346,7 @@ function addRole() {
               console.log(err);
             } else {
               console.log(
-                `\nYou have added a new role, ${role.roleTitle}! \nWould you like to continue with another operation?`
+                `\nYou have added the new ${role.roleTitle} role! \nWould you like to continue with another operation?\n`
               );
               startMenu();
             }
@@ -313,7 +379,9 @@ function addDept() {
         if (err) {
           console.log(err);
         } else {
-          console.log(`\nYou have added a new Department, ${dept.deptName}!\n`);
+          console.log(
+            `\nYou have added the new ${dept.deptName} Department!\nWould you like to continue with another operations?\n`
+          );
           startMenu();
         }
       }
