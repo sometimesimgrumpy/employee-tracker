@@ -1,6 +1,4 @@
-// const mysql = require("mysql2");
-// const consoleTable = require("console.table");
-// const inquirer = require("inquirer");
+// update require functions
 import inquirer from "inquirer";
 import mysql from "mysql2";
 import "console.table";
@@ -101,8 +99,6 @@ function viewAllEmployees() {
       }
     }
   );
-
-  // console.log("view all employees placeholder");
 }
 
 // add employee
@@ -208,7 +204,6 @@ function updateEmployee() {
     if (err) {
       console.log(err);
     }
-    //console.log([res]);
     for (let i = 0; i < res.length; i++) {
       employeeList.push({
         name: `${res[i].first_name} ${res[i].last_name}`,
@@ -219,7 +214,6 @@ function updateEmployee() {
   });
 
   const roleUpdList = [];
-  //const updateIds = [];
   db.query("SELECT id, title FROM job_role", function (err, res) {
     if (err) {
       console.log(err);
@@ -251,8 +245,6 @@ function updateEmployee() {
             roleIDUpd = roleIds[k];
           }
         }
-
-        // console.log([update.empUpdate, update.roleUpdate]);
 
         // query for update https://www.w3schools.com/mysql/mysql_update.asp
         db.query(
@@ -400,6 +392,3 @@ function addDept() {
     );
   });
 }
-
-// start the app
-//startMenu();

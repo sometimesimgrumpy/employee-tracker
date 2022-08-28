@@ -22,7 +22,7 @@ Then initialize the project with `npm i` to install the needed code and then use
 
 ## How It Looks
 
-Video:
+Video: [Drive Link](https://drive.google.com/file/d/1BzbAAzzEdaA0PRYYCOecV1vrB_uYlYP0/view)
 
 ## Tests
 
