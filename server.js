@@ -204,68 +204,80 @@ function addEmployee() {
 function updateEmployee() {
   // get employee list & role list for update
   let employeeList = [];
-  db.query(
-    "SELECT CONCAT(first_name, ' ', last_name) AS emp_name FROM employee",
-    function (err, res) {
-      if (err) {
-        console.log(err);
-      }
-      //console.log([res]);
-      for (let i = 0; i < res.length; i++) {
-        employeeList.push(res[i].emp_name);
-        //console.log(res[i].employees);
-      }
-      console.log("this is the list:", employeeList);
+  db.query("SELECT * FROM employee", function (err, res) {
+    if (err) {
+      console.log(err);
     }
-  );
+    //console.log([res]);
+    for (let i = 0; i < res.length; i++) {
+      employeeList.push({
+        name: `${res[i].first_name} ${res[i].last_name}`,
+        value: res[i].id,
+      });
+    }
+    console.log("this is the list:", employeeList);
+  });
 
   const roleUpdList = [];
-  const updateIds = [];
+  //const updateIds = [];
   db.query("SELECT id, title FROM job_role", function (err, res) {
     if (err) {
       console.log(err);
     }
     for (let j = 0; j < res.length; j++) {
-      roleUpdList.push(res[j].title);
-      updateIds.push(res[j].id);
+      roleUpdList.push({ name: res[j].title, value: res[j].id });
     }
-  });
 
-  inquirer
-    .prompt([
-      {
-        type: "list",
-        message: "Which employee would you like to update?",
-        choices: employeeList,
-        name: "empUpdate",
-      },
-      {
-        type: "list",
-        message: "What is the employee's updated role?",
-        choices: roleUpdList,
-        name: "roleUpdate",
-      },
-    ])
-    .then((update) => {
-      // handle updated role ID
-      let roleIDUpd;
-      for (let k = 0; k < roleUpdList.length; k++) {
-        if (update.roleUpdate == roleUpdList[k]) {
-          roleIDUpd = roleIds[k];
+    inquirer
+      .prompt([
+        {
+          type: "list",
+          message: "Which employee would you like to update?",
+          choices: employeeList,
+          name: "empUpdate",
+        },
+        {
+          type: "list",
+          message: "What is the employee's updated role?",
+          choices: roleUpdList,
+          name: "roleUpdate",
+        },
+      ])
+      .then((update) => {
+        // handle updated role ID
+        let roleIDUpd;
+        for (let k = 0; k < roleUpdList.length; k++) {
+          if (update.roleUpdate == roleUpdList[k]) {
+            roleIDUpd = roleIds[k];
+          }
         }
-      }
 
-      console.log([update.empUpdate, roleIDUpd]);
+        // console.log([update.empUpdate, update.roleUpdate]);
 
-      // query for update https://www.w3schools.com/mysql/mysql_update.asp
-      console.log(`\nWould you like to continue with another operation?\n`);
-      startMenu();
-    });
-
-  //console.log("update Employee placeholder");
+        // query for update https://www.w3schools.com/mysql/mysql_update.asp
+        db.query(
+          "UPDATE employee SET role_id = ? WHERE id = ?",
+          [update.roleUpdate, update.empUpdate],
+          function (err) {
+            if (err) {
+              console.log(err);
+            } else {
+              console.log(
+                `\nYou have updated this employee's role! \nWould you like to continue with another operation?\n`
+              );
+              console.log(
+                `\nWould you like to continue with another operation?\n`
+              );
+              startMenu();
+            }
+          }
+        );
+      });
+  });
 }
 
 // https://www.sqlservertutorial.net/sql-server-basics/sql-server-select/
+// https://sebhastian.com/mysql-truncated-incorrect-double-value/
 // query for roles
 function viewAllRoles() {
   db.query(
